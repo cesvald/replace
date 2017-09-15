@@ -17,9 +17,9 @@ module DocxReplace
     def replace(pattern, replacement, multiple_occurrences=false)
       replace = replacement.to_s.encode(xml: :text)
       if multiple_occurrences
-        @document_content.gsub!(pattern, replace)
+        @document_content.force_encoding("UTF-8").gsub!(pattern, replace)
       else
-        @document_content.sub!(pattern, replace)
+        @document_content.force_encoding("UTF-8").sub!(pattern, replace)
       end
     end
 
@@ -42,7 +42,19 @@ module DocxReplace
     DOCUMENT_FILE_PATH = 'word/document.xml'
 
     def read_docx_file
-      @document_content = @zip_file.read(DOCUMENT_FILE_PATH)
+      folder = Dir.mktmpdir('docx_replace')
+      file = File.join(folder, "document.xml")
+    
+      @zip_file.extract(DOCUMENT_FILE_PATH, file)
+    
+      File.open(file) do |f|
+        @document_content = f.read
+        f.close
+      end
+    
+      FileUtils.rm_rf(folder)
+    
+      @document_content
     end
 
     def write_back_to_file(new_path=nil)
